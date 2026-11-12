@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie Tier List - Soft Apple Style</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+    <style>
+        :root {
+            --apple-bg: #F5F5F7;
+            --apple-card: #FFFFFF;
+            --apple-text: #1D1D1F;
+            --apple-secondary-text: #86868B;
+            --apple-blue: #0071E3;
+            --apple-gray: #F2F2F7;
+            
+            /* Tier Colors with Transparency (80% Opacity) */
+            --tier-s: rgba(255, 59, 48, 0.8);
+            --tier-a: rgba(255, 149, 0, 0.8);
+            --tier-b: rgba(255, 204, 0, 0.8);
+            --tier-c: rgba(52, 199, 89, 0.8);
+            --tier-d: rgba(0, 122, 255, 0.8);
+            --tier-f: rgba(175, 82, 222, 0.8);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display","Pretendard", sans-serif;
+            background-color: var(--apple-bg);
+            color: var(--apple-text);
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container { width: 100%; max-width: 700px; }
+
+        h1 {
+            font-size: 34px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        /* 공유 배너 */
+        #shared-banner {
+            display: none;
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            padding: 20px;
+            border-radius: 18px;
+            margin-bottom: 30px;
+            text-align: center;
+            border: 1px solid rgba(0,0,0,0.05);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.05);
+        }
+
+        .input-group {
+            display: flex;
+            background: var(--apple-card);
+            padding: 6px;
+            border-radius: 14px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            margin-bottom: 20px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            border: none;
+            padding: 12px 16px;
+            font-size: 16px;
+            outline: none;
+            background: transparent;
+        }
+
+        .btn-add {
+            background-color: var(--apple-text);
+            color: white;
+            border-radius: 10px;
+            padding: 8px 18px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .action-buttons { display: flex; gap: 10px; margin-bottom: 30px; }
+        
+        button { border: none; cursor: pointer; transition: all 0.2s ease; font-family: inherit; }
+        button:active { transform: scale(0.98); }
+
+        .btn-share {
+            flex: 1;
+            background-color: var(--apple-blue);
+            color: white;
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .btn-reset {
+            background-color: #E5E5EA;
+            color: var(--apple-text);
+            padding: 12px 18px;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 500;
+        }
+
+        /* 티어 리스트 스타일 */
+        .tier-row {
+            display: flex;
+            background: var(--apple-card);
+            margin-bottom: 10px;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+            min-height: 80px;
+        }
+
+        .tier-label {
+            width: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            font-weight: 700;
+            color: white;
+            flex-shrink: 0;
+            /* 텍스트 가독성을 위해 살짝 그림자 추가 */
+            text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .tier-content {
+            flex: 1;
+            display: flex;
+            flex-wrap: wrap;
+            padding: 12px;
+            gap: 8px;
+            align-content: flex-start;
+        }
+
+        /* 티어별 색상 (투명도 적용) */
+        .s { background-color: var(--tier-s); }
+        .a { background-color: var(--tier-a); }
+        .b { background-color: var(--tier-b); }
+        .c { background-color: var(--tier-c); }
+        .d { background-color: var(--tier-d); }
+        .f { background-color: var(--tier-f); }
+
+        /* 영화 카드 스타일 */
+        .movie-card {
+            background-color: var(--apple-gray);
+            padding: 8px 14px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: grab;
+        }
+
+        .btn-delete {
+            background: none;
+            border: none;
+            color: var(--apple-secondary-text);
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .unclassified-container {
+            margin-top: 40px;
+            padding: 20px;
+            border-radius: 20px;
+            background-color: rgba(0,0,0,0.02);
+            border: 1px dashed rgba(0,0,0,0.05);
+        }
+
+        .unclassified-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--apple-secondary-text);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+            text-align: center;
+        }
+
+        .sortable-ghost { opacity: 0.1; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="shared-banner">
+        <span style="font-weight: 600; font-size: 17px;">📍 Shared List</span><br>
+        <p style="color: var(--apple-secondary-text); margin: 5px 0 12px; font-size: 14px;">공유받은 리스트입니다.</p>
+        <button class="btn-share" style="padding: 8px 16px; font-size: 13px;" onclick="importSharedList()">내 리스트로 저장</button>
+        <button class="btn-reset" style="padding: 8px 16px; font-size: 13px;" onclick="goHome()">닫기</button>
+    </div>
+
+    <h1>Movies</h1>
+
+    <div class="input-group">
+        <input type="text" id="movieInput" placeholder="영화 제목 입력" onkeypress="if(event.keyCode==13) addMovie()">
+        <button class="btn-add" onclick="addMovie()">추가</button>
+    </div>
+
+    <div class="action-buttons">
+        <button class="btn-share" onclick="shareList()">🔗 공유 링크 복사</button>
+        <button class="btn-reset" onclick="resetAll()">초기화</button>
+    </div>
+
+    <div id="tier-list">
+        <div class="tier-row"><div class="tier-label s">S</div><div class="tier-content" id="tier-S"></div></div>
+        <div class="tier-row"><div class="tier-label a">A</div><div class="tier-content" id="tier-A"></div></div>
+        <div class="tier-row"><div class="tier-label b">B</div><div class="tier-content" id="tier-B"></div></div>
+        <div class="tier-row"><div class="tier-label c">C</div><div class="tier-content" id="tier-C"></div></div>
+        <div class="tier-row"><div class="tier-label d">D</div><div class="tier-content" id="tier-D"></div></div>
+        <div class="tier-row"><div class="tier-label f">F</div><div class="tier-content" id="tier-F"></div></div>
+    </div>
+
+    <div class="unclassified-container">
+        <p class="unclassified-title">Inbox</p>
+        <div class="tier-content" id="tier-none"></div>
+    </div>
+</div>
+
+<script>
+    // [로직은 이전과 동일하게 유지하여 안정성 확보]
+    const defaultMovies = ["기생충", "인터스텔라", "라라랜드", "헤어질 결심", "인사이드 아웃 2", "탑건: 매버릭"];
+    let movies = [];
+    let isSharedMode = false;
+
+    function utoa(str) { return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (match, p1) => String.fromCharCode('0x' + p1))); }
+    function atou(str) { return decodeURIComponent(Array.prototype.map.call(atob(str), (c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')); }
+
+    function init() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const sharedData = urlParams.get('data');
+        if (sharedData) {
+            try {
+                movies = JSON.parse(atou(sharedData));
+                isSharedMode = true;
+                document.getElementById('shared-banner').style.display = 'block';
+            } catch (e) {
+                alert("잘못된 링크입니다.");
+                loadLocalData();
+            }
+        } else {
+            loadLocalData();
+        }
+        render();
+    }
+
+    function loadLocalData() {
+        const saved = localStorage.getItem('appleMovieTierV2');
+        movies = saved ? JSON.parse(saved) : defaultMovies.map(title => ({ title, tier: 'none' }));
+    }
+
+    function render() {
+        const tiers = ['S', 'A', 'B', 'C', 'D', 'F', 'none'];
+        tiers.forEach(tierId => {
+            const container = document.getElementById(`tier-${tierId}`);
+            container.innerHTML = '';
+            const filtered = movies.filter(m => m.tier === tierId);
+
+            filtered.forEach(movie => {
+                const card = document.createElement('div');
+                card.className = 'movie-card';
+                card.setAttribute('data-title', movie.title);
+                card.innerHTML = `<span>${movie.title}</span><button class="btn-delete" onclick="deleteMovie('${movie.title}')">×</button>`;
+                container.appendChild(card);
+            });
+
+            new Sortable(container, {
+                group: 'shared',
+                animation: 250,
+                easing: "cubic-bezier(0.25, 1, 0.5, 1)",
+                onAdd: (evt) => {
+                    const title = evt.item.getAttribute('data-title');
+                    const targetTier = evt.to.id.replace('tier-', '');
+                    updateMovieTier(title, targetTier);
+                }
+            });
+        });
+        if (!isSharedMode) save();
+    }
+
+    function addMovie() {
+        const input = document.getElementById('movieInput');
+        const title = input.value.trim();
+        if (!title || movies.some(m => m.title === title)) return;
+        movies.push({ title, tier: 'none' });
+        input.value = '';
+        render();
+    }
+
+    function deleteMovie(title) {
+        movies = movies.filter(m => m.title !== title);
+        render();
+    }
+
+    function updateMovieTier(title, newTier) {
+        const movie = movies.find(m => m.title === title);
+        if (movie) { movie.tier = newTier; render(); }
+    }
+
+    function resetAll() {
+        if (confirm('모든 데이터를 초기화할까요?')) {
+            localStorage.removeItem('appleMovieTierV2');
+            goHome();
+        }
+    }
+
+    function save() { localStorage.setItem('appleMovieTierV2', JSON.stringify(movies)); }
+
+    function shareList() {
+        const base64Data = utoa(JSON.stringify(movies));
+        const safeUrl = window.location.origin + window.location.pathname + "?data=" + encodeURIComponent(base64Data);
+        navigator.clipboard.writeText(safeUrl).then(() => alert("공유 링크가 복사되었습니다!"));
+    }
+
+    function importSharedList() {
+        save();
+        alert("내 리스트에 저장되었습니다.");
+        goHome();
+    }
+
+    function goHome() { window.location.href = window.location.pathname; }
+
+    init();
+</script>
+</body>
+</html>
