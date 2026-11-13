@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f3f8f7">
+  <title>수시(水時) — 오늘의 물 마시기</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #203b3b;
+      --muted: #718786;
+      --line: #dce9e6;
+      --accent: #367f7b;
+      --paper: #f3f8f7;
+      --white: #ffffff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 28px 18px 36px;
+      display: grid;
+      place-items: center;
+      background:
+        radial-gradient(circle at 50% 12%, rgba(255,255,255,.95), transparent 38%),
+        var(--paper);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
+        "Malgun Gothic", "Noto Sans KR", sans-serif;
+    }
+    button, input { font: inherit; }
+    .app {
+      width: min(100%, 440px);
+      text-align: center;
+      padding: 28px 26px 26px;
+      border: 1px solid rgba(210, 228, 224, .85);
+      border-radius: 30px;
+      background: rgba(255,255,255,.82);
+      box-shadow: 0 18px 55px rgba(46, 91, 86, .08);
+    }
+    header { margin-bottom: 24px; }
+    h1 {
+      margin: 0;
+      font-size: clamp(2rem, 8vw, 2.6rem);
+      letter-spacing: -.075em;
+      font-weight: 800;
+    }
+    .meaning {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: .92rem;
+      letter-spacing: -.025em;
+    }
+    .goal-panel {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 17px;
+      background: #f9fcfb;
+      text-align: left;
+    }
+    .goal-panel label {
+      flex: 1;
+      min-width: 0;
+      padding-left: 5px;
+      color: #526c6a;
+      font-size: .88rem;
+      font-weight: 650;
+    }
+    .goal-input-wrap {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    input[type="number"] {
+      width: 66px;
+      height: 42px;
+      padding: 0 5px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      outline: none;
+      background: white;
+      color: var(--ink);
+      text-align: center;
+      font-size: 1rem;
+      font-weight: 750;
+    }
+    input[type="number"]:focus {
+      border-color: #78aaa5;
+      box-shadow: 0 0 0 3px rgba(89, 151, 144, .13);
+    }
+    .unit { color: var(--muted); font-size: .85rem; }
+    .save-button {
+      min-height: 42px;
+      padding: 0 13px;
+      border: 0;
+      border-radius: 10px;
+      background: #e4f0ed;
+      color: #28645f;
+      font-size: .85rem;
+      font-weight: 750;
+      cursor: pointer;
+      transition: background .18s, transform .18s;
+    }
+    .save-button:hover { background: #d6e9e4; }
+    button:active { transform: translateY(1px); }
+    .hint {
+      min-height: 22px;
+      margin: 7px 4px 0;
+      color: #b15f4e;
+      font-size: .78rem;
+      text-align: left;
+      line-height: 1.45;
+    }
+    .cup-stage {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px 0 17px;
+    }
+    .cup {
+      position: relative;
+      width: 174px;
+      height: 214px;
+      overflow: hidden;
+      border: 5px solid rgba(111, 157, 151, .38);
+      border-top: 3px solid rgba(111, 157, 151, .25);
+      border-radius: 12px 12px 37px 37px;
+      background: rgba(255,255,255,.48);
+      box-shadow:
+        inset 9px 0 15px rgba(255,255,255,.65),
+        inset -8px 0 14px rgba(83, 131, 125, .06),
+        0 12px 25px rgba(54, 104, 98, .08);
+      transform: perspective(500px) rotateX(-2deg);
+    }
+    .cup::before {
+      content: "";
+      position: absolute;
+      z-index: 2;
+      top: -1px;
+      left: -5px;
+      right: -5px;
+      height: 12px;
+      border: 3px solid rgba(111, 157, 151, .3);
+      border-radius: 50%;
+      background: rgba(255,255,255,.35);
+    }
+    .water {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 100%;
+      background: hsl(174 47% 39%);
+      opacity: .88;
+      transition: background-color .5s ease, opacity .5s ease;
+      border-radius: 0 0 27px 27px;
+    }
+    .water::before {
+      content: "";
+      position: absolute;
+      left: -8%;
+      top: -7px;
+      width: 116%;
+      height: 15px;
+      border-radius: 50%;
+      background: inherit;
+      filter: brightness(1.08);
+      opacity: .8;
+    }
+    .cup-shine {
+      position: absolute;
+      z-index: 3;
+      top: 24px;
+      left: 13px;
+      width: 8px;
+      height: 118px;
+      border-radius: 20px;
+      background: rgba(255,255,255,.35);
+      pointer-events: none;
+    }
+    .cup.complete { animation: celebrate .52s ease-in-out; }
+    @keyframes celebrate {
+      0%, 100% { transform: perspective(500px) rotateX(-2deg) rotate(0); }
+      20% { transform: perspective(500px) rotateX(-2deg) rotate(-4deg); }
+      40% { transform: perspective(500px) rotateX(-2deg) rotate(4deg); }
+      60% { transform: perspective(500px) rotateX(-2deg) rotate(-2deg); }
+      80% { transform: perspective(500px) rotateX(-2deg) rotate(2deg); }
+    }
+    .drop-button {
+      width: 86px;
+      height: 86px;
+      display: grid;
+      place-items: center;
+      margin: 0 auto 13px;
+      border: 0;
+      border-radius: 50%;
+      background: #e5f3f0;
+      box-shadow: 0 7px 18px rgba(52, 119, 111, .13), inset 0 0 0 1px #d5eae5;
+      font-size: 2.65rem;
+      cursor: pointer;
+      transition: transform .18s, background .18s, box-shadow .18s;
+    }
+    .drop-button:hover {
+      transform: translateY(-2px);
+      background: #d9eeea;
+      box-shadow: 0 10px 22px rgba(52, 119, 111, .17), inset 0 0 0 1px #c8e3dd;
+    }
+    .drop-button:disabled {
+      cursor: default;
+      opacity: .58;
+      transform: none;
+    }
+    .status {
+      min-height: 28px;
+      margin: 0;
+      color: #496966;
+      font-size: .98rem;
+      font-weight: 700;
+      letter-spacing: -.025em;
+    }
+    .status.done {
+      color: #28776d;
+      font-size: 1.08rem;
+    }
+    .actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 25px;
+    }
+    .secondary-button {
+      flex: 1;
+      min-height: 46px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: white;
+      color: #607977;
+      font-size: .88rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .18s, border-color .18s;
+    }
+    .secondary-button:hover {
+      background: #f6faf9;
+      border-color: #c6dcd7;
+    }
+    button:focus-visible {
+      outline: 3px solid rgba(68, 139, 130, .35);
+      outline-offset: 3px;
+    }
+    .footnote {
+      margin: 18px 0 0;
+      color: #9aadaa;
+      font-size: .72rem;
+      letter-spacing: -.01em;
+    }
+    @media (max-width: 380px) {
+      body { padding: 14px 10px; }
+      .app { padding: 23px 17px 21px; border-radius: 24px; }
+      .goal-panel { gap: 6px; }
+      .goal-panel label { font-size: .8rem; }
+      .save-button { padding: 0 10px; }
+      .cup { width: 158px; height: 198px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important;
+        transition-duration: .01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header>
+      <h1>수시(水時)</h1>
+      <p class="meaning">물 마시는 시간을 모아, 나를 돌보는 작은 습관</p>
+    </header>
+
+    <section aria-label="하루 물 마시기 목표">
+      <div class="goal-panel">
+        <label for="goalInput">오늘의 목표</label>
+        <div class="goal-input-wrap">
+          <input id="goalInput" type="number" min="1" max="20" step="1" value="8"
+                 inputmode="numeric" aria-describedby="goalHint">
+          <span class="unit">잔</span>
+        </div>
+        <button class="save-button" id="saveGoal" type="button">목표 저장</button>
+      </div>
+      <p class="hint" id="goalHint" role="status" aria-live="polite"></p>
+    </section>
+
+    <section class="cup-stage" aria-label="오늘의 물 마시기 진행 상황">
+      <div class="cup" id="cup" role="img" aria-label="물이 가득 찬 컵">
+        <div class="water" id="water"></div>
+        <div class="cup-shine"></div>
+      </div>
+    </section>
+
+    <button class="drop-button" id="addWater" type="button" aria-label="물 한 잔 마시기">💧</button>
+    <p class="status" id="status" aria-live="polite">0 / 8잔 마셨어요 · 8잔 남았어요</p>
+
+    <div class="actions">
+      <button class="secondary-button" id="undo" type="button">한 잔 취소</button>
+      <button class="secondary-button" id="reset" type="button">처음으로</button>
+    </div>
+    <p class="footnote">오늘도 천천히, 한 잔씩.</p>
+  </main>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const STORAGE = {
+        goal: "susi-goal",
+        count: "susi-count",
+        date: "susi-date"
+      };
+
+      const goalInput = document.getElementById("goalInput");
+      const saveGoalButton = document.getElementById("saveGoal");
+      const goalHint = document.getElementById("goalHint");
+      const cup = document.getElementById("cup");
+      const water = document.getElementById("water");
+      const addWaterButton = document.getElementById("addWater");
+      const status = document.getElementById("status");
+      const undoButton = document.getElementById("undo");
+      const resetButton = document.getElementById("reset");
+
+      function localDateString(date = new Date()) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
+      }
+
+      let goal = 8;
+      let count = 0;
+      let recordDate = localDateString();
+
+      function readStoredNumber(key, fallback) {
+        const raw = localStorage.getItem(key);
+        if (raw === null || raw.trim() === "") return fallback;
+        const value = Number(raw);
+        return Number.isFinite(value) ? value : fallback;
+      }
+
+      function loadState() {
+        const storedGoal = readStoredNumber(STORAGE.goal, 8);
+        const storedCount = readStoredNumber(STORAGE.count, 0);
+        const storedDate = localStorage.getItem(STORAGE.date);
+        goal = Number.isInteger(storedGoal) && storedGoal >= 1 && storedGoal <= 20
+          ? storedGoal : 8;
+        count = Number.isInteger(storedCount) && storedCount >= 0
+          ? Math.min(storedCount, 20) : 0;
+        recordDate = storedDate || localDateString();
+
+        if (recordDate !== localDateString()) {
+          count = 0;
+          recordDate = localDateString();
+        }
+        if (goal < Math.max(1, count)) goal = Math.max(1, count);
+        saveState();
+      }
+
+      function saveState() {
+        try {
+          localStorage.setItem(STORAGE.goal, String(goal));
+          localStorage.setItem(STORAGE.count, String(count));
+          localStorage.setItem(STORAGE.date, recordDate);
+        } catch (error) {
+          // 브라우저 저장소를 사용할 수 없는 환경에서도 현재 화면은 동작합니다.
+          console.warn("기록을 브라우저에 저장하지 못했습니다.", error);
+        }
+      }
+
+      function isComplete() {
+        return count >= goal;
+      }
+
+      function render(animateCompletion = false) {
+        const complete = isComplete();
+        goalInput.value = String(goal);
+        water.style.backgroundColor = complete
+          ? "transparent"
+          : `hsl(174 47% ${39 + (34 * count / goal)}%)`;
+        water.style.opacity = complete ? "0" : ".88";
+        cup.classList.remove("complete");
+        if (complete) {
+          status.textContent = "오늘의 수시 완료! 🎉";
+          status.classList.add("done");
+          addWaterButton.disabled = true;
+          cup.setAttribute("aria-label", "목표를 달성한 빈 컵");
+          if (animateCompletion) {
+            // 애니메이션을 다시 재생할 수 있도록 다음 프레임에서 클래스를 적용합니다.
+            requestAnimationFrame(() => {
+              cup.classList.add("complete");
+            });
+          }
+        } else {
+          const remaining = goal - count;
+          status.textContent = `${count} / ${goal}잔 마셨어요 · ${remaining}잔 남았어요`;
+          status.classList.remove("done");
+          addWaterButton.disabled = false;
+          cup.setAttribute("aria-label", `물이 ${goal - count}잔 분량 남아 있는 컵`);
+        }
+        saveState();
+      }
+
+      function showHint(message) {
+        goalHint.textContent = message;
+      }
+
+      function saveGoal() {
+        const raw = goalInput.value.trim();
+
+        if (raw === "") {
+          showHint("목표 잔 수를 입력해 주세요.");
+          return;
+        }
+
+        const value = Number(raw);
+        if (!Number.isInteger(value)) {
+          showHint("목표는 1잔 단위로 입력해 주세요.");
+          return;
+        }
+        if (value < 1 || value > 20) {
+          showHint("목표는 1~20잔 사이로 정해 주세요.");
+          return;
+        }
+        if (value < count) {
+          showHint(`이미 ${count}잔 마셨어요. 목표는 ${count}잔 이상으로 정해 주세요.`);
+          return;
+        }
+
+        goal = value;
+        showHint("");
+        render();
+      }
+
+      saveGoalButton.addEventListener("click", saveGoal);
+      goalInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") saveGoal();
+      });
+
+      addWaterButton.addEventListener("click", () => {
+        if (isComplete()) return;
+        const wasComplete = isComplete();
+        count += 1;
+        render(!wasComplete && isComplete());
+      });
+
+      undoButton.addEventListener("click", () => {
+        if (count > 0) count -= 1;
+        render();
+      });
+
+      resetButton.addEventListener("click", () => {
+        count = 0;
+        showHint("");
+        render();
+      });
+
+      function checkDateAndReset() {
+        const today = localDateString();
+        if (today !== recordDate) {
+          count = 0;
+          recordDate = today;
+          showHint("");
+          render();
+        }
+      }
+
+      loadState();
+      render();
+      window.setInterval(checkDateAndReset, 60 * 1000);
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) checkDateAndReset();
+      });
+      window.addEventListener("focus", checkDateAndReset);
+    })();
+  </script>
+</body>
+</html>
