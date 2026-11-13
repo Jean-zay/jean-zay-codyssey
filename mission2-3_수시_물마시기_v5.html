@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f3f7fc">
+  <title>수시(水時) — 오늘의 물 마시기</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #263e59;
+      --muted: #8298b0;
+      --line: #dce7f2;
+      --accent: #83aee0;
+      --accent-strong: #4f7fbf;
+      --paper: #f3f7fc;
+      --white: #ffffff;
+      --focus: rgba(91, 139, 199, .45);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 28px 18px 36px;
+      display: grid;
+      place-items: center;
+      background:
+        radial-gradient(circle at 50% 12%, rgba(255,255,255,.95), transparent 38%),
+        var(--paper);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
+        "Malgun Gothic", "Noto Sans KR", sans-serif;
+      overflow-x: hidden;
+    }
+    button, input, select { font: inherit; }
+    button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+    .app {
+      width: min(100%, 440px);
+      text-align: center;
+      padding: 28px 26px 26px;
+      border: 1px solid rgba(216, 229, 244, .9);
+      border-radius: 30px;
+      background: rgba(255,255,255,.82);
+      box-shadow: 0 18px 55px rgba(75, 112, 158, .09);
+    }
+
+    /* 머리말 */
+    header { margin-bottom: 18px; }
+    h1 {
+      margin: 0;
+      font-size: clamp(1.9rem, 8vw, 2.6rem);
+      letter-spacing: -.05em;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+    .meaning {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: .92rem;
+      letter-spacing: -.025em;
+      word-break: keep-all;
+    }
+
+    /* 오늘 / 달력 전환 탭 */
+    .view-tabs {
+      display: flex;
+      gap: 4px;
+      margin: 0 0 18px;
+      padding: 4px;
+      border-radius: 14px;
+      background: #eef3fa;
+    }
+    .view-tabs button {
+      flex: 1;
+      min-height: 40px;
+      border: 0;
+      border-radius: 11px;
+      background: transparent;
+      color: #6d84a2;
+      font-size: .88rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .18s, color .18s, box-shadow .18s;
+    }
+    .view-tabs button[aria-pressed="true"] {
+      background: var(--white);
+      color: var(--accent-strong);
+      box-shadow: 0 2px 8px rgba(75, 112, 158, .12);
+    }
+
+    /* 목표 설정 */
+    .goal-panel {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 17px;
+      background: #f8fbff;
+      text-align: left;
+    }
+    .goal-panel label {
+      flex: 1;
+      min-width: 0;
+      padding-left: 5px;
+      color: #647d9a;
+      font-size: .88rem;
+      font-weight: 650;
+      white-space: nowrap;
+    }
+    .goal-input-wrap {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      flex-shrink: 0;
+    }
+    select#goalInput {
+      width: 78px;
+      height: 42px;
+      padding: 0 22px 0 10px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      outline: none;
+      background-color: white;
+      color: var(--ink);
+      text-align: center;
+      text-align-last: center;
+      font-size: 1rem;
+      font-weight: 750;
+      cursor: pointer;
+      /* 기기 기본 선택창을 써서 모바일에서도 탭하면 목록이 열립니다. */
+      -webkit-appearance: menulist;
+      appearance: auto;
+    }
+    select#goalInput:focus {
+      border-color: #9bbce5;
+      box-shadow: 0 0 0 3px rgba(125, 169, 222, .16);
+    }
+    .unit { color: var(--muted); font-size: .85rem; }
+    .save-button {
+      flex-shrink: 0;
+      min-height: 42px;
+      padding: 0 13px;
+      border: 0;
+      border-radius: 10px;
+      background: #e8f1fc;
+      color: #426f9f;
+      font-size: .85rem;
+      font-weight: 750;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background .18s, transform .18s;
+    }
+    .save-button:hover { background: #d9e8fa; }
+    button:active { transform: translateY(1px); }
+    .hint {
+      min-height: 22px;
+      margin: 7px 4px 0;
+      color: #b15f4e;
+      font-size: .78rem;
+      text-align: left;
+      line-height: 1.45;
+      word-break: keep-all;
+    }
+
+    /* 컵 */
+    .cup-stage {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px 0 17px;
+    }
+    .cup {
+      position: relative;
+      width: 174px;
+      height: 214px;
+      overflow: hidden;
+      border: 5px solid rgba(133, 172, 218, .48);
+      border-top: 3px solid rgba(133, 172, 218, .32);
+      border-radius: 12px 12px 37px 37px;
+      background: rgba(255,255,255,.48);
+      box-shadow:
+        inset 9px 0 15px rgba(255,255,255,.65),
+        inset -8px 0 14px rgba(91, 132, 184, .07),
+        0 12px 25px rgba(80, 124, 181, .10);
+      transform: perspective(500px) rotateX(-2deg);
+    }
+    .cup::before {
+      content: "";
+      position: absolute;
+      z-index: 2;
+      top: -1px;
+      left: -5px;
+      right: -5px;
+      height: 12px;
+      border: 3px solid rgba(133, 172, 218, .38);
+      border-radius: 50%;
+      background: rgba(255,255,255,.35);
+    }
+    .water {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 100%;
+      /* 0잔일 때의 연한 색. 한 잔마다 JavaScript가 조금씩 진하게 바꿉니다. */
+      background: hsl(211 72% 85%);
+      opacity: .88;
+      transition: background-color .5s ease, opacity .5s ease;
+      border-radius: 0 0 27px 27px;
+    }
+    .water::before {
+      content: "";
+      position: absolute;
+      left: -8%;
+      top: -7px;
+      width: 116%;
+      height: 15px;
+      border-radius: 50%;
+      background: inherit;
+      filter: brightness(1.08);
+      opacity: .8;
+    }
+    .cup-shine {
+      position: absolute;
+      z-index: 3;
+      top: 24px;
+      left: 13px;
+      width: 8px;
+      height: 118px;
+      border-radius: 20px;
+      background: rgba(255,255,255,.35);
+      pointer-events: none;
+    }
+    .cup.complete { animation: celebrate .52s ease-in-out; }
+    @keyframes celebrate {
+      0%, 100% { transform: perspective(500px) rotateX(-2deg) rotate(0); }
+      20% { transform: perspective(500px) rotateX(-2deg) rotate(-4deg); }
+      40% { transform: perspective(500px) rotateX(-2deg) rotate(4deg); }
+      60% { transform: perspective(500px) rotateX(-2deg) rotate(-2deg); }
+      80% { transform: perspective(500px) rotateX(-2deg) rotate(2deg); }
+    }
+
+    /* 💧 버튼과 상태 */
+    .drop-button {
+      width: 86px;
+      height: 86px;
+      display: grid;
+      place-items: center;
+      margin: 0 auto 13px;
+      border: 0;
+      border-radius: 50%;
+      background: #eaf3ff;
+      box-shadow: 0 7px 18px rgba(91, 139, 199, .14), inset 0 0 0 1px #d8e8fb;
+      font-size: 2.65rem;
+      cursor: pointer;
+      transition: transform .18s, background .18s, box-shadow .18s;
+    }
+    .drop-button:hover {
+      transform: translateY(-2px);
+      background: #deedff;
+      box-shadow: 0 10px 22px rgba(91, 139, 199, .18), inset 0 0 0 1px #cbdff8;
+    }
+    .drop-button:disabled {
+      cursor: default;
+      opacity: .58;
+      transform: none;
+    }
+    .status {
+      min-height: 28px;
+      margin: 0;
+      color: #587493;
+      font-size: .98rem;
+      font-weight: 700;
+      letter-spacing: -.025em;
+      word-break: keep-all;
+    }
+    .status.done {
+      color: #527fb4;
+      font-size: 1.08rem;
+    }
+    .actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 25px;
+    }
+    .secondary-button {
+      flex: 1;
+      min-height: 46px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: white;
+      color: #687f9d;
+      font-size: .88rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .18s, border-color .18s;
+    }
+    .secondary-button:hover {
+      background: #f7faff;
+      border-color: #cbdcf0;
+    }
+    button:focus-visible, select:focus-visible {
+      outline: 3px solid var(--focus);
+      outline-offset: 3px;
+    }
+    .footnote {
+      margin: 18px 0 0;
+      color: #9aaec7;
+      font-size: .72rem;
+      letter-spacing: -.01em;
+    }
+
+    /* 달력 */
+    .calendar-view { text-align: left; }
+    .calendar-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin: 0 0 14px;
+    }
+    .calendar-heading h2 {
+      margin: 0;
+      font-size: 1.15rem;
+      letter-spacing: -.04em;
+      white-space: nowrap;
+    }
+    .month-nav { display: flex; gap: 7px; }
+    .month-nav button {
+      width: 36px;
+      height: 36px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: white;
+      color: #5578c4;
+      font-size: 1.1rem;
+      cursor: pointer;
+    }
+    .month-nav button:disabled { opacity: .35; cursor: default; }
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 5px;
+    }
+    .weekday {
+      padding: 4px 0 6px;
+      color: var(--muted);
+      text-align: center;
+      font-size: .75rem;
+      font-weight: 750;
+    }
+    .weekday.sun { color: #c97a7a; }
+    .weekday.sat { color: #6f8fc9; }
+    .calendar-day {
+      min-height: 52px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1px;
+      border: 1px solid #edf1f8;
+      border-radius: 11px;
+      background: #fbfcff;
+      color: var(--ink);
+      font-size: .82rem;
+    }
+    .calendar-day.empty { border-color: transparent; background: transparent; }
+    .calendar-day.today { border-color: var(--accent); background: #f1f6ff; font-weight: 800; }
+    .calendar-day.completed { border-color: #c9dbf7; background: #eaf2ff; }
+    .calendar-day .mark { font-size: .95rem; line-height: 1.1; }
+    .calendar-day .day-count {
+      color: var(--muted);
+      font-size: .62rem;
+      font-weight: 700;
+      line-height: 1.1;
+    }
+    .monthly-summary {
+      margin: 16px 0 0;
+      padding: 14px 12px;
+      border-radius: 14px;
+      background: #f1f6ff;
+      color: #55709b;
+      text-align: center;
+      font-size: .9rem;
+      font-weight: 750;
+      line-height: 1.5;
+      word-break: keep-all;
+    }
+    .calendar-legend {
+      margin: 10px 0 0;
+      color: var(--muted);
+      text-align: center;
+      font-size: .74rem;
+      line-height: 1.5;
+      word-break: keep-all;
+    }
+
+    /* 좁은 화면 (휴대폰) */
+    @media (max-width: 380px) {
+      body { padding: 14px 10px; }
+      .app { padding: 22px 14px 20px; border-radius: 24px; }
+      .meaning { font-size: .84rem; }
+      .goal-panel { gap: 6px; padding: 8px; }
+      .goal-panel label { font-size: .8rem; padding-left: 2px; }
+      select#goalInput { width: 66px; padding: 0 18px 0 6px; }
+      .save-button { padding: 0 9px; font-size: .8rem; }
+      .cup { width: 158px; height: 198px; }
+      .calendar-grid { gap: 4px; }
+      .calendar-day { min-height: 46px; font-size: .76rem; border-radius: 9px; }
+      .calendar-day .day-count { font-size: .56rem; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important;
+        transition-duration: .01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header>
+      <h1>수시(水時)</h1>
+      <p class="meaning">물 마시는 시간을 모아, 나를 돌보는 작은 습관</p>
+    </header>
+
+    <div class="view-tabs" aria-label="화면 전환">
+      <button type="button" id="tabToday" aria-pressed="true">오늘 기록</button>
+      <button type="button" id="tabCalendar" aria-pressed="false">달력 보기</button>
+    </div>
+
+    <!-- 오늘 기록 화면 -->
+    <div id="dailyView">
+      <section aria-label="하루 물 마시기 목표">
+        <div class="goal-panel">
+          <label for="goalInput">오늘의 목표</label>
+          <div class="goal-input-wrap">
+            <select id="goalInput" aria-describedby="goalHint">
+              <option value="">선택</option>
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+              <option value="6">6</option>
+              <option value="7">7</option>
+              <option value="8" selected>8</option>
+              <option value="9">9</option>
+              <option value="10">10</option>
+              <option value="11">11</option>
+              <option value="12">12</option>
+              <option value="13">13</option>
+              <option value="14">14</option>
+              <option value="15">15</option>
+              <option value="16">16</option>
+              <option value="17">17</option>
+              <option value="18">18</option>
+              <option value="19">19</option>
+              <option value="20">20</option>
+            </select>
+            <span class="unit">잔</span>
+          </div>
+          <button class="save-button" id="saveGoal" type="button">목표 저장</button>
+        </div>
+        <p class="hint" id="goalHint" role="status" aria-live="polite"></p>
+      </section>
+
+      <section class="cup-stage" aria-label="오늘의 물 마시기 진행 상황">
+        <div class="cup" id="cup" role="img" aria-label="아직 연한 색의 컵">
+          <div class="water" id="water"></div>
+          <div class="cup-shine"></div>
+        </div>
+      </section>
+
+      <button class="drop-button" id="addWater" type="button" aria-label="물 한 잔 마시기">💧</button>
+      <p class="status" id="status" aria-live="polite">0 / 8잔 마셨어요 · 8잔 남았어요</p>
+
+      <div class="actions">
+        <button class="secondary-button" id="undo" type="button">한 잔 취소</button>
+        <button class="secondary-button" id="reset" type="button">처음으로</button>
+      </div>
+      <p class="footnote">오늘도 천천히, 한 잔씩.</p>
+    </div>
+
+    <!-- 달력 화면 -->
+    <section class="calendar-view" id="calendarView" aria-label="월별 물 마시기 기록" hidden>
+      <div class="calendar-heading">
+        <h2 id="monthTitle">2026년 11월</h2>
+        <div class="month-nav">
+          <button id="prevMonth" type="button" aria-label="이전 달">‹</button>
+          <button id="nextMonth" type="button" aria-label="다음 달">›</button>
+        </div>
+      </div>
+      <div class="calendar-grid" id="calendarGrid"></div>
+      <p class="monthly-summary" id="monthlySummary" aria-live="polite"></p>
+      <p class="calendar-legend">목표를 달성한 날은 💧, 덜 마신 날은 마신 잔 수가 표시돼요.</p>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const STORAGE = {
+        goal: "susi-goal",
+        count: "susi-count",
+        date: "susi-date",
+        history: "susi-history"
+      };
+
+      const $ = (id) => document.getElementById(id);
+      const goalInput = $("goalInput");
+      const saveGoalButton = $("saveGoal");
+      const goalHint = $("goalHint");
+      const cup = $("cup");
+      const water = $("water");
+      const addWaterButton = $("addWater");
+      const status = $("status");
+      const undoButton = $("undo");
+      const resetButton = $("reset");
+      const tabToday = $("tabToday");
+      const tabCalendar = $("tabCalendar");
+      const dailyView = $("dailyView");
+      const calendarView = $("calendarView");
+      const monthTitle = $("monthTitle");
+      const calendarGrid = $("calendarGrid");
+      const monthlySummary = $("monthlySummary");
+      const prevMonthButton = $("prevMonth");
+      const nextMonthButton = $("nextMonth");
+
+      const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
+
+      // 기기의 현지 시간 기준 YYYY-MM-DD
+      function localDateString(date = new Date()) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
+      }
+
+      function storageGet(key) {
+        try { return localStorage.getItem(key); } catch (_) { return null; }
+      }
+
+      function readStoredNumber(key, fallback) {
+        const raw = storageGet(key);
+        if (raw === null || raw.trim() === "") return fallback;
+        const value = Number(raw);
+        return Number.isFinite(value) ? value : fallback;
+      }
+
+      let goal = 8;
+      let count = 0;
+      let recordDate = localDateString();
+      let history = {};
+      let shownYear = new Date().getFullYear();
+      let shownMonth = new Date().getMonth();
+
+      function isValidRecord(record) {
+        return record && typeof record === "object" &&
+          Number.isInteger(record.count) && record.count >= 0 &&
+          Number.isInteger(record.goal) && record.goal >= 1 && record.goal <= 20;
+      }
+
+      function loadState() {
+        const storedGoal = readStoredNumber(STORAGE.goal, 8);
+        const storedCount = readStoredNumber(STORAGE.count, 0);
+        const storedDate = storageGet(STORAGE.date);
+
+        try {
+          const parsed = JSON.parse(storageGet(STORAGE.history) || "{}");
+          history = parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+        } catch (_) {
+          history = {};
+        }
+        // 형식이 잘못된 기록은 버립니다.
+        Object.keys(history).forEach((key) => {
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(key) || !isValidRecord(history[key])) delete history[key];
+        });
+
+        goal = Number.isInteger(storedGoal) && storedGoal >= 1 && storedGoal <= 20 ? storedGoal : 8;
+        count = Number.isInteger(storedCount) && storedCount >= 0 ? Math.min(storedCount, 20) : 0;
+        recordDate = storedDate || localDateString();
+
+        // 이전 버전에서 쓰던 오늘 기록을 날짜별 기록으로 옮깁니다.
+        if (recordDate && !history[recordDate]) {
+          history[recordDate] = { count: Math.min(count, goal), goal };
+        }
+
+        // 날짜가 바뀌었으면 잔 수는 0부터 (목표는 유지)
+        const today = localDateString();
+        if (recordDate !== today) {
+          recordDate = today;
+          count = 0;
+        }
+        if (goal < Math.max(1, count)) goal = Math.max(1, count);
+        saveState();
+      }
+
+      function saveState() {
+        history[recordDate] = { count, goal };
+        try {
+          localStorage.setItem(STORAGE.goal, String(goal));
+          localStorage.setItem(STORAGE.count, String(count));
+          localStorage.setItem(STORAGE.date, recordDate);
+          localStorage.setItem(STORAGE.history, JSON.stringify(history));
+        } catch (error) {
+          // 저장소를 쓸 수 없는 환경에서도 현재 화면은 동작합니다.
+          console.warn("기록을 브라우저에 저장하지 못했습니다.", error);
+        }
+      }
+
+      function isComplete() {
+        return count >= goal;
+      }
+
+      function render(animateCompletion = false) {
+        const complete = isComplete();
+        goalInput.value = String(goal);
+
+        // 한 잔마다 전체의 1/목표만큼 진해지고, 완료하면 가장 진한 파란색이 됩니다.
+        const ratio = Math.min(count / goal, 1);
+        water.style.backgroundColor = `hsl(211 72% ${85 - (46 * ratio)}%)`;
+        water.style.opacity = ".88";
+        cup.classList.remove("complete");
+
+        if (complete) {
+          status.textContent = "오늘의 수시 완료! 🎉";
+          status.classList.add("done");
+          addWaterButton.disabled = true;
+          cup.setAttribute("aria-label", "목표를 채운 진한 파란색 컵");
+          if (animateCompletion) {
+            requestAnimationFrame(() => cup.classList.add("complete"));
+          }
+        } else {
+          const remaining = goal - count;
+          status.textContent = `${count} / ${goal}잔 마셨어요 · ${remaining}잔 남았어요`;
+          status.classList.remove("done");
+          addWaterButton.disabled = false;
+          cup.setAttribute("aria-label", `${count}잔만큼 색이 채워진 컵, ${remaining}잔 남음`);
+        }
+        saveState();
+      }
+
+      function showHint(message) {
+        goalHint.textContent = message;
+      }
+
+      function saveGoal() {
+        checkDateAndReset();
+        const raw = goalInput.value.trim();
+        if (raw === "") {
+          showHint("목표 잔 수를 선택해 주세요.");
+          return;
+        }
+        const value = Number(raw);
+        if (!Number.isInteger(value)) {
+          showHint("목표는 1잔 단위로 정해 주세요.");
+          return;
+        }
+        if (value < 1 || value > 20) {
+          showHint("목표는 1~20잔 사이로 정해 주세요.");
+          return;
+        }
+        if (value < count) {
+          showHint(`이미 ${count}잔 마셨어요. 목표는 ${count}잔 이상으로 정해 주세요.`);
+          // 선택창은 저장되지 않은 값 대신 현재 목표를 다시 보여 줍니다.
+          goalInput.value = String(goal);
+          return;
+        }
+        const wasComplete = isComplete();
+        goal = value;
+        showHint("");
+        render(!wasComplete && isComplete());
+      }
+
+      // ---------- 달력 ----------
+      function renderCalendar() {
+        const now = new Date();
+        const isCurrentMonth = shownYear === now.getFullYear() && shownMonth === now.getMonth();
+        const firstDay = new Date(shownYear, shownMonth, 1).getDay();
+        const daysInMonth = new Date(shownYear, shownMonth + 1, 0).getDate();
+        const monthKey = `${shownYear}-${String(shownMonth + 1).padStart(2, "0")}`;
+        const today = localDateString();
+        let completedDays = 0;
+        let recordedDays = 0;
+
+        monthTitle.textContent = `${shownYear}년 ${shownMonth + 1}월`;
+        nextMonthButton.disabled = isCurrentMonth; // 미래 달로는 넘어가지 않음
+        calendarGrid.innerHTML = "";
+
+        WEEKDAYS.forEach((day, index) => {
+          const label = document.createElement("div");
+          label.className = "weekday" + (index === 0 ? " sun" : index === 6 ? " sat" : "");
+          label.textContent = day;
+          calendarGrid.appendChild(label);
+        });
+
+        for (let i = 0; i < firstDay; i++) {
+          const empty = document.createElement("div");
+          empty.className = "calendar-day empty";
+          empty.setAttribute("aria-hidden", "true");
+          calendarGrid.appendChild(empty);
+        }
+
+        for (let day = 1; day <= daysInMonth; day++) {
+          const dateKey = `${monthKey}-${String(day).padStart(2, "0")}`;
+          const record = history[dateKey];
+          const hasRecord = isValidRecord(record) && record.count > 0;
+          const achieved = isValidRecord(record) && record.count >= record.goal;
+
+          const cell = document.createElement("div");
+          cell.className = "calendar-day";
+          if (dateKey === today) cell.classList.add("today");
+
+          const dateNumber = document.createElement("span");
+          dateNumber.textContent = String(day);
+          cell.appendChild(dateNumber);
+
+          let label = `${shownMonth + 1}월 ${day}일`;
+          if (achieved) {
+            completedDays++;
+            recordedDays++;
+            cell.classList.add("completed");
+            const mark = document.createElement("span");
+            mark.className = "mark";
+            mark.textContent = "💧";
+            mark.setAttribute("aria-hidden", "true");
+            cell.appendChild(mark);
+            label += `, 목표 달성 (${record.count}/${record.goal}잔)`;
+          } else if (hasRecord) {
+            recordedDays++;
+            const small = document.createElement("span");
+            small.className = "day-count";
+            small.textContent = `${record.count}/${record.goal}`;
+            small.setAttribute("aria-hidden", "true");
+            cell.appendChild(small);
+            label += `, ${record.count}/${record.goal}잔`;
+          }
+          cell.setAttribute("aria-label", label);
+          cell.title = label;
+          calendarGrid.appendChild(cell);
+        }
+
+        const trailing = (7 - ((firstDay + daysInMonth) % 7)) % 7;
+        for (let i = 0; i < trailing; i++) {
+          const empty = document.createElement("div");
+          empty.className = "calendar-day empty";
+          empty.setAttribute("aria-hidden", "true");
+          calendarGrid.appendChild(empty);
+        }
+
+        const monthName = isCurrentMonth ? "이번 달" : `${shownMonth + 1}월`;
+        monthlySummary.textContent = recordedDays === 0
+          ? `${monthName}에는 아직 기록이 없어요.`
+          : `${monthName} 목표를 달성한 날은 ${completedDays}일이에요.`;
+      }
+
+      function showView(view) {
+        const calendar = view === "calendar";
+        calendarView.hidden = !calendar;
+        dailyView.hidden = calendar;
+        tabToday.setAttribute("aria-pressed", String(!calendar));
+        tabCalendar.setAttribute("aria-pressed", String(calendar));
+        if (calendar) {
+          const now = new Date();
+          shownYear = now.getFullYear();
+          shownMonth = now.getMonth();
+          renderCalendar();
+        }
+      }
+
+      // ---------- 이벤트 ----------
+      saveGoalButton.addEventListener("click", saveGoal);
+      goalInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") saveGoal();
+      });
+
+      addWaterButton.addEventListener("click", () => {
+        checkDateAndReset();
+        if (isComplete()) return;
+        count += 1;
+        render(isComplete());
+      });
+
+      undoButton.addEventListener("click", () => {
+        checkDateAndReset();
+        if (count > 0) count -= 1;
+        render();
+      });
+
+      resetButton.addEventListener("click", () => {
+        count = 0;
+        showHint("");
+        render();
+      });
+
+      tabToday.addEventListener("click", () => showView("today"));
+      tabCalendar.addEventListener("click", () => showView("calendar"));
+
+      prevMonthButton.addEventListener("click", () => {
+        shownMonth--;
+        if (shownMonth < 0) { shownMonth = 11; shownYear--; }
+        renderCalendar();
+      });
+
+      nextMonthButton.addEventListener("click", () => {
+        if (nextMonthButton.disabled) return;
+        shownMonth++;
+        if (shownMonth > 11) { shownMonth = 0; shownYear++; }
+        renderCalendar();
+      });
+
+      // ---------- 날짜 변경 감지 (페이지를 켜 둔 채 자정이 지나도 초기화) ----------
+      function checkDateAndReset() {
+        const today = localDateString();
+        if (today !== recordDate) {
+          recordDate = today;
+          count = 0;
+          showHint("");
+          render();
+          if (!calendarView.hidden) renderCalendar();
+        }
+      }
+
+      loadState();
+      render();
+      window.setInterval(checkDateAndReset, 60 * 1000);
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) checkDateAndReset();
+      });
+      window.addEventListener("focus", checkDateAndReset);
+    })();
+  </script>
+</body>
+</html>
